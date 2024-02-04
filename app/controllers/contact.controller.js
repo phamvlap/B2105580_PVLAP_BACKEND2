@@ -10,7 +10,7 @@ exports.create = async (req, res, next) => {
     
     try {
         const contactService = new ContactService(MongoDB.client);
-        const contact = await contactService.create(req.body);
+        const contact = await contactService.create({ ...req.body, userId: req.user._id });
         return res.json({ data: { contact } });
     }
     catch(error) {
@@ -26,10 +26,10 @@ exports.findAll = async (req, res, next) => {
         const contactService = new ContactService(MongoDB.client);
         const { name } = req.query;
         if(name) {
-            contacts = await contactService.findByName(name);
+            contacts = await contactService.findByName(req.user._id, name);
         }
         else {
-            contacts = await contactService.find({});
+            contacts = await contactService.find({ userId: req.user._id });
         }
     }
     catch(error) {
@@ -45,7 +45,7 @@ exports.findAll = async (req, res, next) => {
 exports.findOne = async (req, res, next) => {
     try {
         const contactService = new ContactService(MongoDB.client);
-        const contact = await contactService.findById(req.params.id);
+        const contact = await contactService.findById(req.params.id, req.user._id);
         if(!contact) {
             return next(new ApiError(404, 'Contact not found'));
         }
@@ -63,10 +63,9 @@ exports.update = async (req, res, next) => {
     if(Object.keys(req.body).length === 0) {
         return next(new ApiError(400, 'Data to update can not be empty'));
     }
-
     try {
         const contactService = new ContactService(MongoDB.client);
-        const newContact = await contactService.update(req.params.id, req.body);
+        const newContact = await contactService.update(req.params.id, req.body, req.user._id);
         if(!newContact) {
             return next(new ApiError(404, 'Contact not found'));
         }
@@ -86,7 +85,7 @@ exports.update = async (req, res, next) => {
 exports.delete = async (req, res, next) => {
     try {
         const contactService = new ContactService(MongoDB.client);
-        const deletedContact = await contactService.delete(req.params.id);
+        const deletedContact = await contactService.delete(req.params.id, req.user._id);
         if(!deletedContact) {
             return next(new ApiError(404, 'Contact not found'));
         }
@@ -106,7 +105,7 @@ exports.delete = async (req, res, next) => {
 exports.deleteAll = async (req, res, next) => {
     try {
         const contactService = new ContactService(MongoDB.client);
-        const deletedCount = await contactService.deleteMany();
+        const deletedCount = await contactService.deleteMany(req.user._id);
         return res.json({
             message: `${deletedCount} contacts were deleted successfully`,
         })
@@ -122,7 +121,7 @@ exports.deleteAll = async (req, res, next) => {
 exports.findAllFavorite = async (req, res, next) => {
     try {
         const contactService = new ContactService(MongoDB.client);
-        const favoriteContacts = await contactService.findFavorite();
+        const favoriteContacts = await contactService.findFavorite(req.user._id);
         return res.json({ data: { contacts: favoriteContacts } });
     }
     catch(error) {

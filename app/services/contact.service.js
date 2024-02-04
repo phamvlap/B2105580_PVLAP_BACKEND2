@@ -13,6 +13,7 @@ class ContactService {
             address: payload.address,
             phone: payload.phone,
             favorite: payload.favorite,
+            createdBy: new ObjectId(payload.userId),
         };
         // remove undefined fields
         Object.keys(contact).forEach(key => {
@@ -43,12 +44,15 @@ class ContactService {
 
     // find with filter
     async find(filter) {
+        filter.createdBy = new ObjectId(filter.userId);
+        delete filter['userId'];
         return await this.Contact.find(filter).toArray();
     }
 
     // find by name
-    async findByName(name) {
+    async findByName(userId, name) {
         return await this.Contact.find({
+            createdBy: new ObjectId(userId),
             name: {
                 $regex: new RegExp(name),
                 $options: 'i',
@@ -57,22 +61,27 @@ class ContactService {
     }
 
     // find by ID
-    async findById(id) {
+    async findById(id, userId) {
         return await this.Contact.findOne({
             _id: ObjectId.isValid(id)  ? new ObjectId(id) : null,
-        })
+            createdBy: new ObjectId(userId),
+        });
     }
 
     // update contact with id
-    async update(id, payload) {
+    async update(id, payload, userId) {
         const filter = {
             _id: ObjectId.isValid(id)  ? new ObjectId(id) : null,
+            createdBy: new ObjectId(userId),
         };
         const updatedData = this.extractContactData(payload);
         const result = await this.Contact.findOneAndUpdate(
             filter,
             {
-                $set: updatedData,
+                $set: {
+                    ...updatedData,
+                    createdBy: new ObjectId(userId),
+                },
             },
             {
                 returnDocument: 'after',
@@ -82,20 +91,24 @@ class ContactService {
     }
 
     // delete with id
-    async delete(id) {
+    async delete(id, userId) {
         return await this.Contact.findOneAndDelete({
             _id: ObjectId.isValid(id) ? new ObjectId(id) : null,
+            createdBy: new ObjectId(userId),
         });
     }
 
     // find favorite
-    async findFavorite() {
-        return await this.Contact.find({ favorite: true }).toArray();
+    async findFavorite(userId) {
+        return await this.Contact.find({
+            createdBy: new ObjectId(userId),
+            favorite: true
+        }).toArray();
     }
 
-    // delete many
-    async deleteMany() {
-        const result = await this.Contact.deleteMany({});
+    // delete 
+    async deleteMany(userId) {
+        const result = await this.Contact.deleteMany({ createdBy: new ObjectId(userId) });
         return result.deletedCount;
     }
 }
